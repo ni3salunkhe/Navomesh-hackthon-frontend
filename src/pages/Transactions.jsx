@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
-import { transactionAPI } from '../api/axios';
-import { HiOutlineSearch, HiOutlineFilter, HiOutlineArrowUp, HiOutlineArrowDown } from 'react-icons/hi';
+import { useSearchParams } from 'react-router-dom';
+import { dashboardAPI } from '../api/axios';
+import { normalizeDashboard } from '../utils/normalizers';
+import OverrideModal from '../components/modals/OverrideModal';
+import { HiOutlineSearch, HiOutlineFilter, HiOutlineArrowUp, HiOutlineArrowDown, HiOutlinePencilAlt } from 'react-icons/hi'; import { HiOutlinePencil } from 'react-icons/hi';
 
 const CATEGORY_BADGES = {
     FOOD: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
@@ -20,9 +23,12 @@ const Transactions = () => {
     const [transactions, setTransactions] = useState([]);
     const [filteredTransactions, setFilteredTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedTransaction, setSelectedTransaction] = useState(null);
+    const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
+    const [searchParams] = useSearchParams();
     const [searchTerm, setSearchTerm] = useState('');
     const [typeFilter, setTypeFilter] = useState('ALL');
-    const [categoryFilter, setCategoryFilter] = useState('ALL');
+    const [categoryFilter, setCategoryFilter] = useState(searchParams.get('category') || 'ALL');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 15;
 
@@ -33,10 +39,13 @@ const Transactions = () => {
     const fetchTransactions = async () => {
         setLoading(true);
         try {
-            const response = await transactionAPI.getAll();
-            if (response.data?.data) {
-                setTransactions(response.data.data);
-                setFilteredTransactions(response.data.data);
+            const response = await dashboardAPI.get();
+            const rawData = response.data.data ? response.data.data : response.data;
+            const normalized = normalizeDashboard(rawData);
+
+            if (normalized) {
+                setTransactions(normalized.transactions);
+                setFilteredTransactions(normalized.transactions);
             }
         } catch (error) {
             console.error('Failed to fetch transactions:', error);
@@ -55,7 +64,7 @@ const Transactions = () => {
         }
 
         if (typeFilter !== 'ALL') {
-            filtered = filtered.filter(t => t.transactionType === typeFilter);
+            filtered = filtered.filter(t => t.type === typeFilter);
         }
 
         if (categoryFilter !== 'ALL') {
@@ -143,6 +152,7 @@ const Transactions = () => {
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-dark-500 dark:text-dark-400">Category</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-dark-500 dark:text-dark-400">Type</th>
                                 <th className="text-right px-6 py-4 text-sm font-semibold text-dark-500 dark:text-dark-400">Amount</th>
+                                <th className="text-right px-6 py-4 text-sm font-semibold text-dark-500 dark:text-dark-400">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -153,7 +163,7 @@ const Transactions = () => {
                                             {t.date ? new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
                                         </td>
                                         <td className="px-6 py-4 text-sm text-dark-900 dark:text-white font-medium max-w-xs truncate">
-                                            {t.description || 'Transaction'}
+                                            {t.merchant || t.rawDescription || 'Transaction'}
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`badge ${CATEGORY_BADGES[t.category] || CATEGORY_BADGES.OTHERS}`}>
@@ -162,20 +172,32 @@ const Transactions = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-1.5">
-                                                {t.transactionType === 'CREDIT' ? (
+                                                {t.type === 'CREDIT' ? (
                                                     <HiOutlineArrowUp className="text-accent-500" size={14} />
                                                 ) : (
                                                     <HiOutlineArrowDown className="text-danger-500" size={14} />
                                                 )}
-                                                <span className={`text-sm font-medium ${t.transactionType === 'CREDIT' ? 'text-accent-600 dark:text-accent-400' : 'text-danger-600 dark:text-danger-400'
+                                                <span className={`text-sm font-medium ${t.type === 'CREDIT' ? 'text-accent-600 dark:text-accent-400' : 'text-danger-600 dark:text-danger-400'
                                                     }`}>
-                                                    {t.transactionType}
+                                                    {t.type}
                                                 </span>
                                             </div>
                                         </td>
-                                        <td className={`px-6 py-4 text-right font-bold text-sm ${t.transactionType === 'CREDIT' ? 'text-accent-600 dark:text-accent-400' : 'text-danger-600 dark:text-danger-400'
+                                        <td className={`px-6 py-4 text-right font-bold text-sm ${t.type === 'CREDIT' ? 'text-accent-600 dark:text-accent-400' : 'text-danger-600 dark:text-danger-400'
                                             }`}>
-                                            {t.transactionType === 'CREDIT' ? '+' : '-'}{formatCurrency(t.amount)}
+                                            {t.type === 'CREDIT' ? '+' : '-'}{formatCurrency(t.amount)}
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedTransaction(t);
+                                                    setIsOverrideModalOpen(true);
+                                                }}
+                                                className="p-1.5 text-dark-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-500/10 rounded-lg transition-all"
+                                                title="Override Transaction"
+                                            >
+                                                <HiOutlinePencil size={18} />
+                                            </button>
                                         </td>
                                     </tr>
                                 ))
@@ -217,6 +239,14 @@ const Transactions = () => {
                     </div>
                 )}
             </div>
+
+            {isOverrideModalOpen && selectedTransaction && (
+                <OverrideModal
+                    transaction={selectedTransaction}
+                    onClose={() => setIsOverrideModalOpen(false)}
+                    onSuccess={fetchTransactions}
+                />
+            )}
         </div>
     );
 };

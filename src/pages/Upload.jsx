@@ -38,14 +38,13 @@ const Upload = () => {
         setUploading(true);
         try {
             const response = await documentAPI.upload(file);
-            if (response.data.success) {
-                setUploadSuccess(true);
-                setResult(response.data.data);
-                toast.success('Document processed successfully! Transactions extracted.');
-            }
+            setUploadSuccess(true);
+            setResult(response.data);
+            toast.success('Document processed successfully! Transactions extracted.');
         } catch (error) {
-            const message = error.response?.data?.message || 'Upload failed. Please try again.';
-            toast.error(message);
+            console.error(error);
+            const message = error.response?.data?.message || error.response?.data || error.message || 'Upload failed. Please try again.';
+            toast.error(typeof message === 'string' ? message : 'Upload failed. Please try again.');
         } finally {
             setUploading(false);
         }
@@ -73,10 +72,10 @@ const Upload = () => {
                     <div
                         {...getRootProps()}
                         className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all duration-300 ${isDragActive
-                                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/10'
-                                : file
-                                    ? 'border-accent-400 bg-accent-50 dark:bg-accent-900/10'
-                                    : 'border-dark-300 dark:border-dark-600 hover:border-primary-400 hover:bg-primary-50/50 dark:hover:bg-primary-900/5'
+                            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/10'
+                            : file
+                                ? 'border-accent-400 bg-accent-50 dark:bg-accent-900/10'
+                                : 'border-dark-300 dark:border-dark-600 hover:border-primary-400 hover:bg-primary-50/50 dark:hover:bg-primary-900/5'
                             }`}
                     >
                         <input {...getInputProps()} id="file-upload-input" />
@@ -148,12 +147,14 @@ const Upload = () => {
                         <div className="glass-card p-6 mb-6 text-left max-w-md mx-auto">
                             <div className="space-y-3">
                                 <div className="flex justify-between">
-                                    <span className="text-dark-500">File Name</span>
-                                    <span className="font-medium text-dark-900 dark:text-white">{result.fileName}</span>
+                                    <span className="text-dark-500">Transactions Found</span>
+                                    <span className="font-medium text-dark-900 dark:text-white">
+                                        {result.recentTransactions ? result.recentTransactions.length : 0}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-dark-500">Document Type</span>
-                                    <span className="badge-success">{result.documentType}</span>
+                                    <span className="text-dark-500">Status</span>
+                                    <span className="badge-success">Analyzed</span>
                                 </div>
                             </div>
                         </div>

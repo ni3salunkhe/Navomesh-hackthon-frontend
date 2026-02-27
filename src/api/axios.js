@@ -36,7 +36,7 @@ api.interceptors.response.use(
 
 // Auth APIs
 export const authAPI = {
-    register: (data) => api.post('/api/auth/register', data),
+    register: (data) => api.post('/api/users/register', data), // updated endpoint
     login: (data) => api.post('/api/auth/login', data),
 };
 
@@ -45,27 +45,32 @@ export const documentAPI = {
     upload: (file) => {
         const formData = new FormData();
         formData.append('file', file);
-        return api.post('/api/documents/upload', formData, {
+        return api.post('/api/upload', formData, { // updated endpoint
             headers: { 'Content-Type': 'multipart/form-data' },
         });
     },
-    getAll: () => api.get('/api/documents'),
 };
 
-// Transaction APIs
+// Dashboard API (Replaces transaction & analytics APIs)
+export const dashboardAPI = {
+    get: () => api.get('/api/dashboard'),
+};
+
+// Budget APIs
+export const budgetAPI = {
+    create: (data) => api.post('/api/budgets', data),
+    getAll: () => api.get('/api/budgets'),
+    delete: (id) => api.delete(`/api/budgets/${id}`),
+};
+
+// Transaction Override APIs
 export const transactionAPI = {
-    getAll: () => api.get('/api/transactions'),
-    getMonthly: (month) => api.get(`/api/transactions/monthly?month=${month}`),
-    getByCategory: () => api.get('/api/transactions/category'),
+    override: (id, data) => api.put(`/api/transactions/${id}/override`, data),
 };
 
-// Analytics APIs
-export const analyticsAPI = {
-    getSummary: () => api.get('/api/analytics/summary'),
-    getRisk: () => api.get('/api/analytics/risk'),
-    getRecurring: () => api.get('/api/analytics/recurring'),
-    getMonthlyTrend: () => api.get('/api/analytics/monthly'),
-    getCategories: () => api.get('/api/analytics/categories'),
+// Admin APIs
+export const adminAPI = {
+    getLogs: () => api.get('/api/admin/logs'),
 };
 
 export default api;

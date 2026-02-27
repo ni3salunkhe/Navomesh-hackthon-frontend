@@ -5,7 +5,8 @@ import { useTheme } from '../context/ThemeContext';
 import {
     HiOutlineHome, HiOutlineCloudUpload, HiOutlineCreditCard,
     HiOutlineChartBar, HiOutlineUser, HiOutlineLogout,
-    HiOutlineSun, HiOutlineMoon, HiOutlineMenuAlt2, HiOutlineX
+    HiOutlineSun, HiOutlineMoon, HiOutlineMenuAlt2, HiOutlineX,
+    HiOutlineShieldCheck, HiOutlineCurrencyRupee, HiOutlineRefresh
 } from 'react-icons/hi';
 
 const navItems = [
@@ -13,6 +14,8 @@ const navItems = [
     { path: '/upload', icon: HiOutlineCloudUpload, label: 'Upload' },
     { path: '/transactions', icon: HiOutlineCreditCard, label: 'Transactions' },
     { path: '/analytics', icon: HiOutlineChartBar, label: 'Analytics' },
+    { path: '/budgets', icon: HiOutlineCurrencyRupee, label: 'Budgets' },
+    { path: '/recurring', icon: HiOutlineRefresh, label: 'Recurring' },
     { path: '/profile', icon: HiOutlineUser, label: 'Profile' },
 ];
 
@@ -67,17 +70,23 @@ const Layout = ({ children }) => {
 
                 {/* Nav Links */}
                 <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-                    {navItems.map((item) => (
-                        <NavLink
-                            key={item.path}
-                            to={item.path}
-                            onClick={() => setSidebarOpen(false)}
-                            className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
-                        >
-                            <item.icon size={20} />
-                            <span>{item.label}</span>
-                        </NavLink>
-                    ))}
+                    {(() => {
+                        const displayNavItems = (user?.role === 'ROLE_ADMIN' || user?.role === 'ADMIN')
+                            ? [...navItems, { path: '/admin', icon: HiOutlineShieldCheck, label: 'Admin Logs' }]
+                            : navItems;
+
+                        return displayNavItems.map((item) => (
+                            <NavLink
+                                key={item.path}
+                                to={item.path}
+                                onClick={() => setSidebarOpen(false)}
+                                className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                            >
+                                <item.icon size={20} />
+                                <span>{item.label}</span>
+                            </NavLink>
+                        ));
+                    })()}
                 </nav>
 
                 {/* Bottom Section */}

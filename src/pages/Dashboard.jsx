@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { analyticsAPI } from '../api/axios';
+import { useNavigate } from 'react-router-dom';
+import { dashboardAPI } from '../api/axios';
+import { normalizeDashboard } from '../utils/normalizers';
 import {
     HiOutlineTrendingUp, HiOutlineTrendingDown, HiOutlineCash,
     HiOutlineShieldCheck, HiOutlineExclamation, HiOutlineRefresh
@@ -12,6 +14,7 @@ const CATEGORY_COLORS = [
 ];
 
 const Dashboard = () => {
+    const navigate = useNavigate();
     const [summary, setSummary] = useState(null);
     const [monthlyTrend, setMonthlyTrend] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -19,22 +22,63 @@ const Dashboard = () => {
     const [risk, setRisk] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    const calculateRiskScore = (data) => {
+        const income = data.summary.totalIncome;
+        const expense = data.summary.totalExpense;
+
+        if (income === 0) return 50;
+
+        const savingsRatio = (income - expense) / income;
+
+        if (savingsRatio >= 0.4) return 90;
+        if (savingsRatio >= 0.25) return 75;
+        if (savingsRatio >= 0.1) return 60;
+        return 40;
+    };
+
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [summaryRes, trendRes, catRes, recurRes, riskRes] = await Promise.all([
-                analyticsAPI.getSummary().catch(() => ({ data: { data: null } })),
-                analyticsAPI.getMonthlyTrend().catch(() => ({ data: { data: [] } })),
-                analyticsAPI.getCategories().catch(() => ({ data: { data: [] } })),
-                analyticsAPI.getRecurring().catch(() => ({ data: { data: [] } })),
-                analyticsAPI.getRisk().catch(() => ({ data: { data: null } })),
-            ]);
+            const response = await dashboardAPI.get();
+            console.log("Raw Backend Response:", response.data);
 
-            setSummary(summaryRes.data?.data);
-            setMonthlyTrend(trendRes.data?.data || []);
-            setCategories(catRes.data?.data || []);
-            setRecurring(recurRes.data?.data || []);
-            setRisk(riskRes.data?.data);
+            // Check if backend wraps response in { success: true, data: {...} } or returns DTO directly
+            const rawData = response.data.data ? response.data.data : response.data;
+            const normalized = normalizeDashboard(rawData);
+
+            if (!normalized) return;
+
+            setSummary({
+                totalIncome: normalized.summary.totalIncome,
+                totalExpenses: normalized.summary.totalExpense,
+                savings: normalized.summary.netBalance,
+                riskScore: calculateRiskScore(normalized)
+            });
+
+            setCategories(
+                Object.entries(normalized.categoryBreakdown).map(
+                    ([category, amount]) => ({ category, amount })
+                )
+            );
+
+            setRecurring(normalized.recurring);
+            setRisk({ alerts: normalized.alerts });
+
+            // Build monthly trend from normalized transactions
+            const trendMap = {};
+            normalized.transactions.forEach(tx => {
+                if (tx.date) {
+                    const d = new Date(tx.date);
+                    const month = d.toLocaleString('default', { month: 'short' });
+                    if (!trendMap[month]) trendMap[month] = { month, income: 0, expense: 0 };
+
+                    if (tx.type === 'CREDIT') trendMap[month].income += tx.amount;
+                    else trendMap[month].expense += tx.amount;
+                }
+            });
+
+            setMonthlyTrend(Object.values(trendMap));
+
         } catch (error) {
             console.error('Failed to fetch dashboard data:', error);
         } finally {
@@ -216,18 +260,31 @@ const Dashboard = () => {
 
             {/* Bottom Row */}
             <div className="grid lg:grid-cols-2 gap-6">
-                {/* Recurring Expenses */}
+                {/* Recurring Expenses Preview */}
                 <div className="glass-card-solid p-6">
-                    <h3 className="text-lg font-bold text-dark-900 dark:text-white mb-4">Recurring Expenses</h3>
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-lg font-bold text-dark-900 dark:text-white">Recurring Expenses</h3>
+                        <button
+                            onClick={() => navigate('/recurring')}
+                            className="text-xs font-bold text-primary-500 hover:underline"
+                        >
+                            View Analysis
+                        </button>
+                    </div>
                     {recurring.length > 0 ? (
-                        <div className="space-y-3 max-h-64 overflow-y-auto">
-                            {recurring.map((item, i) => (
-                                <div key={i} className="flex items-center justify-between p-4 bg-dark-50 dark:bg-dark-700/50 rounded-xl">
-                                    <div>
-                                        <p className="font-medium text-dark-900 dark:text-white truncate max-w-[200px]">{item.description}</p>
-                                        <p className="text-sm text-dark-400">{item.frequency}x occurrences</p>
+                        <div className="space-y-3">
+                            {recurring.slice(0, 4).map((item, i) => (
+                                <div key={i} className="flex items-center justify-between p-4 bg-dark-50 dark:bg-dark-700/50 rounded-xl border border-transparent hover:border-primary-500/20 transition-all">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-primary-100/50 dark:bg-primary-900/30 rounded-lg">
+                                            <HiOutlineRefresh className="text-primary-600 dark:text-primary-400" size={16} />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="font-medium text-dark-900 dark:text-white truncate max-w-[150px] text-sm">{item.merchant}</p>
+                                            <p className="text-[10px] text-dark-400">Every {item.intervalDays} days</p>
+                                        </div>
                                     </div>
-                                    <p className="font-bold text-danger-500">{formatCurrency(item.totalAmount)}</p>
+                                    <p className="font-bold text-dark-900 dark:text-white text-sm">{formatCurrency(item.averageAmount)}</p>
                                 </div>
                             ))}
                         </div>
@@ -238,32 +295,60 @@ const Dashboard = () => {
                     )}
                 </div>
 
-                {/* Risk Alerts */}
+                {/* Enhanced Actionable Alerts */}
                 <div className="glass-card-solid p-6">
-                    <h3 className="text-lg font-bold text-dark-900 dark:text-white mb-4">Risk Alerts</h3>
-                    {risk?.alerts?.length > 0 ? (
-                        <div className="space-y-3 max-h-64 overflow-y-auto">
-                            {risk.alerts.map((alert, i) => (
-                                <div key={i} className={`flex items-start gap-3 p-4 rounded-xl ${alert.severity === 'HIGH'
-                                        ? 'bg-danger-50 dark:bg-danger-500/10 border border-danger-200 dark:border-danger-500/20'
-                                        : 'bg-warning-50 dark:bg-warning-500/10 border border-warning-200 dark:border-warning-500/20'
-                                    }`}>
-                                    <HiOutlineExclamation className={`flex-shrink-0 mt-0.5 ${alert.severity === 'HIGH' ? 'text-danger-500' : 'text-warning-500'
-                                        }`} size={20} />
-                                    <div>
-                                        <p className={`font-semibold text-sm ${alert.severity === 'HIGH' ? 'text-danger-600 dark:text-danger-400' : 'text-warning-600 dark:text-warning-400'
-                                            }`}>{alert.type.replace('_', ' ')}</p>
-                                        <p className="text-sm text-dark-600 dark:text-dark-300 mt-1">{alert.message}</p>
+                    <h3 className="text-lg font-bold text-dark-900 dark:text-white mb-6">Risk Alerts</h3>
+                    <div className="space-y-4">
+                        {risk?.alerts && risk.alerts.length > 0 ? (
+                            risk.alerts
+                                .sort((a, b) => {
+                                    const priority = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+                                    return priority[a.severity] - priority[b.severity];
+                                })
+                                .map((alert, i) => (
+                                    <div
+                                        key={i}
+                                        onClick={() => {
+                                            if (alert.relatedCategory) {
+                                                navigate(`/transactions?category=${alert.relatedCategory}`);
+                                            } else {
+                                                navigate('/transactions');
+                                            }
+                                        }}
+                                        className={`flex items-start gap-4 p-4 rounded-xl border transition-all cursor-pointer hover:border-primary-500/20 ${alert.severity === 'HIGH'
+                                            ? 'bg-danger-50 dark:bg-danger-500/10 border-danger-100 dark:border-danger-500/20'
+                                            : 'bg-warning-50 dark:bg-warning-500/5 border-warning-100 dark:border-warning-500/20'
+                                            }`}
+                                    >
+                                        <div className={`p-2 rounded-lg mt-0.5 ${alert.severity === 'HIGH' ? 'bg-danger-100 text-danger-600' : 'bg-warning-100 text-warning-600'
+                                            }`}>
+                                            <HiOutlineExclamation size={18} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <p className={`font-bold text-sm ${alert.severity === 'HIGH' ? 'text-danger-700 dark:text-danger-400' : 'text-warning-700 dark:text-warning-400'
+                                                    }`}>
+                                                    {alert.type || 'Alert'}
+                                                </p>
+                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${alert.severity === 'HIGH' ? 'bg-danger-200 text-danger-800' : 'bg-warning-200 text-warning-800'
+                                                    }`}>
+                                                    {alert.severity}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-dark-600 dark:text-dark-300 leading-relaxed mb-1">
+                                                {alert.message}
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center h-32 text-dark-400">
-                            <HiOutlineShieldCheck size={32} className="text-accent-500 mb-2" />
-                            <p>No risk alerts — you're doing great!</p>
-                        </div>
-                    )}
+                                ))
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-12 text-dark-400 text-center">
+                                <HiOutlineShieldCheck size={48} className="mb-4 opacity-20 text-success-500" />
+                                <p className="text-sm font-medium">Financial health is stable</p>
+                                <p className="text-xs">No critical alerts detected at this time.</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

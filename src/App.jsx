@@ -11,6 +11,9 @@ import Upload from './pages/Upload';
 import Transactions from './pages/Transactions';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
+import Budgets from './pages/Budgets';
+import Recurring from './pages/Recurring';
+import AdminLogs from './pages/AdminLogs';
 
 const ProtectedRoute = ({ children }) => {
     const { isAuthenticated, loading } = useAuth();
@@ -40,6 +43,23 @@ const PublicRoute = ({ children }) => {
     return !isAuthenticated ? children : <Navigate to="/dashboard" replace />;
 };
 
+const AdminRoute = ({ children }) => {
+    const { user, isAuthenticated, loading } = useAuth();
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-dark-50 dark:bg-dark-950">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
+            </div>
+        );
+    }
+
+    if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+    const isAdmin = user?.role === 'ROLE_ADMIN' || user?.role === 'ADMIN';
+    return isAdmin ? children : <Navigate to="/dashboard" replace />;
+};
+
 const AppContent = () => {
     const { darkMode } = useTheme();
 
@@ -54,7 +74,10 @@ const AppContent = () => {
                     <Route path="/upload" element={<ProtectedRoute><Layout><Upload /></Layout></ProtectedRoute>} />
                     <Route path="/transactions" element={<ProtectedRoute><Layout><Transactions /></Layout></ProtectedRoute>} />
                     <Route path="/analytics" element={<ProtectedRoute><Layout><Analytics /></Layout></ProtectedRoute>} />
+                    <Route path="/budgets" element={<ProtectedRoute><Layout><Budgets /></Layout></ProtectedRoute>} />
+                    <Route path="/recurring" element={<ProtectedRoute><Layout><Recurring /></Layout></ProtectedRoute>} />
                     <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
+                    <Route path="/admin" element={<AdminRoute><Layout><AdminLogs /></Layout></AdminRoute>} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </Router>

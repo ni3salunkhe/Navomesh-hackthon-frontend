@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { analyticsAPI } from '../api/axios';
+import { dashboardAPI } from '../api/axios';
+import { normalizeDashboard } from '../utils/normalizers';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend, AreaChart, Area
@@ -25,17 +26,41 @@ const Analytics = () => {
     const fetchAnalytics = async () => {
         setLoading(true);
         try {
-            const [summaryRes, trendRes, catRes, riskRes] = await Promise.all([
-                analyticsAPI.getSummary().catch(() => ({ data: { data: null } })),
-                analyticsAPI.getMonthlyTrend().catch(() => ({ data: { data: [] } })),
-                analyticsAPI.getCategories().catch(() => ({ data: { data: [] } })),
-                analyticsAPI.getRisk().catch(() => ({ data: { data: null } })),
-            ]);
+            const response = await dashboardAPI.get();
+            const rawData = response.data.data ? response.data.data : response.data;
+            const normalized = normalizeDashboard(rawData);
 
-            setSummary(summaryRes.data?.data);
-            setMonthlyTrend(trendRes.data?.data || []);
-            setCategories(catRes.data?.data || []);
-            setRisk(riskRes.data?.data);
+            if (!normalized) return;
+
+            setSummary({
+                totalIncome: normalized.summary.totalIncome,
+                totalExpenses: normalized.summary.totalExpense,
+                savings: normalized.summary.netBalance,
+                savingsRatio: normalized.summary.totalIncome > 0 ? ((normalized.summary.netBalance / normalized.summary.totalIncome) * 100).toFixed(1) : 0,
+                expenseRatio: normalized.summary.totalIncome > 0 ? ((normalized.summary.totalExpense / normalized.summary.totalIncome) * 100).toFixed(1) : 0,
+            });
+
+            setMonthlyTrend(Object.values(normalized.transactions.reduce((acc, tx) => {
+                if (tx.date) {
+                    const d = new Date(tx.date);
+                    const month = d.toLocaleString('default', { month: 'short' });
+                    if (!acc[month]) acc[month] = { month, income: 0, expense: 0 };
+                    if (tx.type === 'CREDIT') acc[month].income += tx.amount;
+                    else acc[month].expense += tx.amount;
+                }
+                return acc;
+            }, {})));
+
+            setCategories(Object.entries(normalized.categoryBreakdown).map(
+                ([category, amount]) => ({ category, amount })
+            ));
+
+            const emiAlert = normalized.alerts.find(a => a.type === 'HIGH_EMI_BURDEN' || a.message?.toLowerCase().includes('emi'));
+            setRisk({
+                alerts: normalized.alerts,
+                emiBurden: emiAlert ? 50 : 15,
+            });
+
         } catch (error) {
             console.error('Failed to fetch analytics:', error);
         } finally {
