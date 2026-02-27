@@ -14,10 +14,13 @@ import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
 import Budgets from './pages/Budgets';
 import Recurring from './pages/Recurring';
+import Review from './pages/Review';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminUsers from './pages/AdminUsers';
 import AdminLogs from './pages/AdminLogs';
 
 const ProtectedRoute = ({ children }) => {
-    const { isAuthenticated, loading } = useAuth();
+    const { user, isAuthenticated, loading } = useAuth();
 
     if (loading) {
         return (
@@ -27,11 +30,17 @@ const ProtectedRoute = ({ children }) => {
         );
     }
 
-    return isAuthenticated ? children : <Navigate to="/login" replace />;
+    if (isAuthenticated) {
+        const isAdmin = user?.role === 'ROLE_ADMIN' || user?.role === 'ADMIN';
+        if (isAdmin) return <Navigate to="/admin" replace />;
+        return children;
+    }
+
+    return <Navigate to="/login" replace />;
 };
 
 const PublicRoute = ({ children }) => {
-    const { isAuthenticated, loading } = useAuth();
+    const { user, isAuthenticated, loading } = useAuth();
 
     if (loading) {
         return (
@@ -41,7 +50,8 @@ const PublicRoute = ({ children }) => {
         );
     }
 
-    return !isAuthenticated ? children : <Navigate to="/dashboard" replace />;
+    const isAdmin = user?.role === 'ROLE_ADMIN' || user?.role === 'ADMIN';
+    return !isAuthenticated ? children : (isAdmin ? <Navigate to="/admin" replace /> : <Navigate to="/dashboard" replace />);
 };
 
 const AdminRoute = ({ children }) => {
@@ -72,13 +82,19 @@ const AppContent = () => {
                     <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
                     <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
                     <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+                    <Route path="/review" element={<ProtectedRoute><Layout><Review /></Layout></ProtectedRoute>} />
                     <Route path="/upload" element={<ProtectedRoute><Layout><Upload /></Layout></ProtectedRoute>} />
                     <Route path="/transactions" element={<ProtectedRoute><Layout><Transactions /></Layout></ProtectedRoute>} />
                     <Route path="/analytics" element={<ProtectedRoute><Layout><Analytics /></Layout></ProtectedRoute>} />
                     <Route path="/budgets" element={<ProtectedRoute><Layout><Budgets /></Layout></ProtectedRoute>} />
                     <Route path="/recurring" element={<ProtectedRoute><Layout><Recurring /></Layout></ProtectedRoute>} />
                     <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
-                    <Route path="/admin" element={<AdminRoute><Layout><AdminLogs /></Layout></AdminRoute>} />
+
+                    {/* Admin Routes */}
+                    <Route path="/admin" element={<AdminRoute><Layout><AdminDashboard /></Layout></AdminRoute>} />
+                    <Route path="/admin/users" element={<AdminRoute><Layout><AdminUsers /></Layout></AdminRoute>} />
+                    <Route path="/admin/logs" element={<AdminRoute><Layout><AdminLogs /></Layout></AdminRoute>} />
+
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </Router>

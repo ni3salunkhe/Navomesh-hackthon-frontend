@@ -66,10 +66,14 @@ export const budgetAPI = {
 // Transaction Override APIs
 export const transactionAPI = {
     override: (id, data) => api.put(`/api/transactions/${id}/override`, data),
+    getReview: () => api.get('/api/transactions/review'),
 };
 
 // Admin APIs
 export const adminAPI = {
+    getStats: () => api.get('/api/admin/stats'),
+    getUsers: () => api.get('/api/admin/users'),
+    updateUserStatus: (id, status) => api.patch(`/api/admin/users/${id}/status`, { status }),
     getLogs: () => api.get('/api/admin/logs'),
 };
 

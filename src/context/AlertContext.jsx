@@ -14,13 +14,18 @@ export const useAlerts = () => {
 };
 
 export const AlertProvider = ({ children }) => {
-    const { isAuthenticated } = useAuth();
+    const { user, isAuthenticated } = useAuth();
     const [alerts, setAlerts] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [reviewCount, setReviewCount] = useState(0);
     const prevAlertsRef = useRef([]);
 
     const fetchAlerts = async () => {
         if (!isAuthenticated) return;
+
+        const isAdmin = user?.role === 'ROLE_ADMIN' || user?.role === 'ADMIN';
+        if (isAdmin) return;
+
         try {
             const response = await dashboardAPI.get();
             const rawData = response.data.data ? response.data.data : response.data;
@@ -31,6 +36,7 @@ export const AlertProvider = ({ children }) => {
             // Count unread (Status ACTIVE in backend map to unread in frontend)
             const activeCount = newAlerts.filter(a => a.status === 'ACTIVE').length;
             setUnreadCount(activeCount);
+            setReviewCount(rawData.reviewCount || 0);
 
             // Trigger toasts for new HIGH severity alerts
             newAlerts.forEach(alert => {
@@ -63,7 +69,7 @@ export const AlertProvider = ({ children }) => {
     }, [isAuthenticated]);
 
     return (
-        <AlertContext.Provider value={{ alerts, unreadCount, fetchAlerts }}>
+        <AlertContext.Provider value={{ alerts, unreadCount, reviewCount, fetchAlerts }}>
             {children}
         </AlertContext.Provider>
     );

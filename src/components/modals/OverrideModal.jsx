@@ -7,6 +7,7 @@ const CATEGORIES = ['FOOD', 'TRANSPORT', 'SHOPPING', 'BILLS', 'ENTERTAINMENT', '
 
 const OverrideModal = ({ transaction, onClose, onSuccess }) => {
     const [category, setCategory] = useState(transaction.category || 'OTHERS');
+    const [merchant, setMerchant] = useState(transaction.merchant || '');
     const [amount, setAmount] = useState(transaction.amount || 0);
     const [loading, setLoading] = useState(false);
 
@@ -15,7 +16,8 @@ const OverrideModal = ({ transaction, onClose, onSuccess }) => {
         setLoading(true);
         try {
             await transactionAPI.override(transaction.id, {
-                userOverrideCategory: category,
+                category: category,
+                merchant: merchant,
                 amount: Number(amount)
             });
             toast.success('Transaction updated');
@@ -45,6 +47,17 @@ const OverrideModal = ({ transaction, onClose, onSuccess }) => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
+                    <div>
+                        <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1.5">Merchant Name</label>
+                        <input
+                            type="text"
+                            value={merchant}
+                            onChange={(e) => setMerchant(e.target.value)}
+                            className="input-field w-full"
+                            placeholder="Merchant Name"
+                        />
+                    </div>
+
                     <div>
                         <label className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1.5">Category</label>
                         <select

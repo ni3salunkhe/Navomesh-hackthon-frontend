@@ -152,6 +152,7 @@ const Transactions = () => {
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-dark-500 dark:text-dark-400">Category</th>
                                 <th className="text-left px-6 py-4 text-sm font-semibold text-dark-500 dark:text-dark-400">Type</th>
                                 <th className="text-right px-6 py-4 text-sm font-semibold text-dark-500 dark:text-dark-400">Amount</th>
+                                <th className="text-center px-6 py-4 text-sm font-semibold text-dark-500 dark:text-dark-400">Confidence</th>
                                 <th className="text-right px-6 py-4 text-sm font-semibold text-dark-500 dark:text-dark-400">Action</th>
                             </tr>
                         </thead>
@@ -186,6 +187,14 @@ const Transactions = () => {
                                         <td className={`px-6 py-4 text-right font-bold text-sm ${t.type === 'CREDIT' ? 'text-accent-600 dark:text-accent-400' : 'text-danger-600 dark:text-danger-400'
                                             }`}>
                                             {t.type === 'CREDIT' ? '+' : '-'}{formatCurrency(t.amount)}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <div className={`text-xs font-bold px-2 py-1 rounded-lg inline-block ${(t.confidenceScore >= 0.8 || t.userOverrideCategory)
+                                                    ? 'bg-dark-100 text-dark-500'
+                                                    : 'bg-danger-100 text-danger-700'
+                                                }`}>
+                                                {t.userOverrideCategory ? 'Human Verified' : `${(t.confidenceScore * 100).toFixed(0)}%`}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <button

@@ -66,11 +66,14 @@ const AdminLogs = () => {
                                 logs.map((log, i) => (
                                     <tr key={log.id || i} className="border-b border-dark-100 dark:border-dark-800 hover:bg-dark-50 dark:hover:bg-dark-800/50 transition-colors">
                                         <td className="px-6 py-4 text-sm text-dark-600 dark:text-dark-300 font-medium whitespace-nowrap">
-                                            {log.timestamp ? new Date(log.timestamp).toLocaleString() : '-'}
+                                            {log.createdAt ? new Date(log.createdAt).toLocaleString() : '-'}
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className="badge bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
-                                                {log.action || log.level || 'INFO'}
+                                                {log.level || 'INFO'}
+                                            </span>
+                                            <span className="ml-2 text-xs text-dark-400">
+                                                [{log.source}]
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-dark-900 dark:text-white">

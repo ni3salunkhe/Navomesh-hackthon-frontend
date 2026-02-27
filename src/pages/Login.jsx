@@ -22,9 +22,16 @@ const Login = () => {
         try {
             const response = await authAPI.login({ email, password });
             if (response.data.success) {
-                login(response.data.data);
+                const userData = response.data.data;
+                login(userData);
                 toast.success('Welcome back!');
-                navigate('/dashboard');
+
+                // Redirect based on role
+                if (userData.role === 'ROLE_ADMIN' || userData.role === 'ADMIN') {
+                    navigate('/admin');
+                } else {
+                    navigate('/dashboard');
+                }
             }
         } catch (error) {
             const message = error.response?.data?.message || 'Login failed. Please try again.';

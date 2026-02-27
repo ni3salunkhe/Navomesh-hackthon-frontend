@@ -8,11 +8,12 @@ import {
     HiOutlineChartBar, HiOutlineUser, HiOutlineLogout,
     HiOutlineSun, HiOutlineMoon, HiOutlineMenuAlt2, HiOutlineX,
     HiOutlineShieldCheck, HiOutlineCurrencyRupee, HiOutlineRefresh,
-    HiOutlineBell
+    HiOutlineBell, HiOutlineClipboardCheck, HiOutlineUserGroup
 } from 'react-icons/hi';
 
 const navItems = [
     { path: '/dashboard', icon: HiOutlineHome, label: 'Dashboard' },
+    { path: '/review', icon: HiOutlineClipboardCheck, label: 'Review' },
     { path: '/upload', icon: HiOutlineCloudUpload, label: 'Upload' },
     { path: '/transactions', icon: HiOutlineCreditCard, label: 'Transactions' },
     { path: '/analytics', icon: HiOutlineChartBar, label: 'Analytics' },
@@ -21,9 +22,15 @@ const navItems = [
     { path: '/profile', icon: HiOutlineUser, label: 'Profile' },
 ];
 
+const adminNavItems = [
+    { path: '/admin', icon: HiOutlineShieldCheck, label: 'System Stats' },
+    { path: '/admin/users', icon: HiOutlineUserGroup, label: 'Users' },
+    { path: '/admin/logs', icon: HiOutlineClipboardCheck, label: 'Audit Logs' },
+];
+
 const Layout = ({ children }) => {
     const { user, logout } = useAuth();
-    const { unreadCount } = useAlerts();
+    const { unreadCount, reviewCount } = useAlerts();
     const { darkMode, toggleDarkMode } = useTheme();
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -87,19 +94,25 @@ const Layout = ({ children }) => {
                 {/* Nav Links */}
                 <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
                     {(() => {
-                        const displayNavItems = (user?.role === 'ROLE_ADMIN' || user?.role === 'ADMIN')
-                            ? [...navItems, { path: '/admin', icon: HiOutlineShieldCheck, label: 'Admin Logs' }]
-                            : navItems;
+                        const isAdmin = user?.role === 'ROLE_ADMIN' || user?.role === 'ADMIN';
+                        const itemsToDisplay = isAdmin ? adminNavItems : navItems;
 
-                        return displayNavItems.map((item) => (
+                        return itemsToDisplay.map((item) => (
                             <NavLink
                                 key={item.path}
                                 to={item.path}
                                 onClick={() => setSidebarOpen(false)}
-                                className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+                                className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''} flex items-center justify-between`}
                             >
-                                <item.icon size={20} />
-                                <span>{item.label}</span>
+                                <div className="flex items-center gap-2">
+                                    <item.icon size={20} />
+                                    <span>{item.label}</span>
+                                </div>
+                                {item.path === '/review' && reviewCount > 0 && (
+                                    <span className="bg-primary-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                        {reviewCount}
+                                    </span>
+                                )}
                             </NavLink>
                         ));
                     })()}
