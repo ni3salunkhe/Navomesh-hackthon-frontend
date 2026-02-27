@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { AlertProvider } from './context/AlertContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import Layout from './components/Layout';
 import Landing from './pages/Landing';
@@ -110,7 +111,9 @@ function App() {
     return (
         <ThemeProvider>
             <AuthProvider>
-                <AppContent />
+                <AlertProvider>
+                    <AppContent />
+                </AlertProvider>
             </AuthProvider>
         </ThemeProvider>
     );

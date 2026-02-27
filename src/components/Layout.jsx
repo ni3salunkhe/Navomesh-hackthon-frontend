@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useAlerts } from '../context/AlertContext';
 import { useTheme } from '../context/ThemeContext';
 import {
     HiOutlineHome, HiOutlineCloudUpload, HiOutlineCreditCard,
     HiOutlineChartBar, HiOutlineUser, HiOutlineLogout,
     HiOutlineSun, HiOutlineMoon, HiOutlineMenuAlt2, HiOutlineX,
-    HiOutlineShieldCheck, HiOutlineCurrencyRupee, HiOutlineRefresh
+    HiOutlineShieldCheck, HiOutlineCurrencyRupee, HiOutlineRefresh,
+    HiOutlineBell
 } from 'react-icons/hi';
 
 const navItems = [
@@ -21,6 +23,7 @@ const navItems = [
 
 const Layout = ({ children }) => {
     const { user, logout } = useAuth();
+    const { unreadCount } = useAlerts();
     const { darkMode, toggleDarkMode } = useTheme();
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -59,12 +62,25 @@ const Layout = ({ children }) => {
                                 <p className="text-xs text-dark-400">Smart Tracker</p>
                             </div>
                         </div>
-                        <button
-                            onClick={() => setSidebarOpen(false)}
-                            className="lg:hidden text-dark-500 hover:text-dark-700 dark:hover:text-dark-300"
-                        >
-                            <HiOutlineX size={24} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <div
+                                onClick={() => navigate('/dashboard')}
+                                className="relative p-2 text-dark-500 hover:text-primary-500 cursor-pointer transition-colors lg:hidden"
+                            >
+                                <HiOutlineBell size={22} />
+                                {unreadCount > 0 && (
+                                    <span className="absolute top-1 right-1 w-4 h-4 bg-danger-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-dark-900">
+                                        {unreadCount}
+                                    </span>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => setSidebarOpen(false)}
+                                className="lg:hidden text-dark-500 hover:text-dark-700 dark:hover:text-dark-300"
+                            >
+                                <HiOutlineX size={24} />
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -91,6 +107,23 @@ const Layout = ({ children }) => {
 
                 {/* Bottom Section */}
                 <div className="p-4 border-t border-dark-200 dark:border-dark-700 space-y-3">
+                    {/* Notifications Button */}
+                    <button
+                        onClick={() => navigate('/dashboard')}
+                        className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-dark-500 dark:text-dark-400
+                       hover:bg-dark-100 dark:hover:bg-dark-800 transition-all duration-200"
+                    >
+                        <div className="flex items-center gap-3">
+                            <HiOutlineBell size={20} />
+                            <span className="font-medium">Notifications</span>
+                        </div>
+                        {unreadCount > 0 && (
+                            <span className="bg-danger-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                {unreadCount} New
+                            </span>
+                        )}
+                    </button>
+
                     {/* Theme Toggle */}
                     <button
                         onClick={toggleDarkMode}
