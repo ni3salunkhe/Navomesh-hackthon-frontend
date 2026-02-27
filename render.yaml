@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: navomesh-frontend
+    name: expense-tracker-frontend
     runtime: static
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
