@@ -11,5 +11,11 @@ export default defineConfig({
         changeOrigin: true,
       }
     }
+  },
+  preview: {
+    allowedHosts: [
+      'navomesh-hackthon-frontend.onrender.com',
+      'expense-tracker-frontend.onrender.com'
+    ]
   }
 })
