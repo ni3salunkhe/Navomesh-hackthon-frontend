@@ -36,8 +36,8 @@ const Dashboard = () => {
         return 40;
     };
 
-    const fetchData = async () => {
-        setLoading(true);
+    const fetchData = async (isBackground = false) => {
+        if (!isBackground) setLoading(true);
         try {
             const response = await dashboardAPI.get();
             console.log("Raw Backend Response:", response.data);
@@ -82,12 +82,16 @@ const Dashboard = () => {
         } catch (error) {
             console.error('Failed to fetch dashboard data:', error);
         } finally {
-            setLoading(false);
+            if (!isBackground) setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchData();
+        fetchData(false);
+        const interval = setInterval(() => {
+            fetchData(true);
+        }, 10000);
+        return () => clearInterval(interval);
     }, []);
 
     const formatCurrency = (val) => {
@@ -168,7 +172,7 @@ const Dashboard = () => {
                     <h1 className="page-header">Dashboard</h1>
                     <p className="text-dark-500 dark:text-dark-400 mt-1">Your financial overview at a glance</p>
                 </div>
-                <button onClick={fetchData} className="btn-secondary flex items-center gap-2">
+                <button onClick={() => fetchData(false)} className="btn-secondary flex items-center gap-2">
                     <HiOutlineRefresh size={18} />
                     Refresh
                 </button>
